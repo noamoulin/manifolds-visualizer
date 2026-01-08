@@ -1,12 +1,16 @@
 use crate::{HEIGHT, WIDTH};
 
 //algorithme de Bresenham
-pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32, buffer: &mut [u32]) {
-    let mut x0 = x0 as isize;
-    let mut y0 = y0 as isize;
-    let x1 = x1 as isize;
-    let y1 = y1 as isize;
-
+fn draw_line(
+    buffer: &mut [u32],
+    width: i32,
+    height: i32,
+    mut x0: i32,
+    mut y0: i32,
+    x1: i32,
+    y1: i32,
+    color: u32,
+) {
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
@@ -14,8 +18,9 @@ pub fn draw_line(x0: usize, y0: usize, x1: usize, y1: usize, color: u32, buffer:
     let mut err = dx + dy;
 
     loop {
-        if x0 >= 0 && x0 < WIDTH as isize && y0 >= 0 && y0 < HEIGHT as isize {
-            buffer[y0 as usize * WIDTH + x0 as usize] = color;
+        if 0 <= x0 && x0 < width && 0 <= y0 && y0 < height {
+            let idx = (y0 * width + x0) as usize;
+            buffer[idx] = color;
         }
 
         if x0 == x1 && y0 == y1 {

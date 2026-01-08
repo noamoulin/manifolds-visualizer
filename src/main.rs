@@ -1,5 +1,5 @@
 use minifb::{Window, WindowOptions};
-use nalgebra::{Matrix4, Vector3};
+use nalgebra::{Matrix4, Perspective3, Vector3};
 
 mod drawing;
 mod surfaces;
@@ -30,13 +30,14 @@ pub struct Camera {
     forward: Vector3<f32>,
     up: Vector3<f32>,
     right: Vector3<f32>,
-    fov: f32,
+    fovy: f32,
+    perspective_center_distance: f32,
     world_to_cam: Matrix4<f32>,
 }
 
 impl Camera {
     //camera à (0, O, 0) regardant vers (0, 0, -1), up vers (0, 1, 0)
-    pub fn new_at_origin(fov: f32) -> Self {
+    pub fn new_at_origin(fovy: f32) -> Self {
         let pos = Vector3::new(0.0, 0.0, 0.0);
         let forward = Vector3::new(0.0, 0.0, -1.0);
         let up = Vector3::new(0.0, 1.0, 0.0);
@@ -49,14 +50,28 @@ impl Camera {
             0.0,     0.0,  0.0,       1.0,
         );
 
+        let perspective_center_distance = 1.0 / (fovy / 2.0).tan();
+
         Self {
             pos,
             forward,
             up,
             right,
-            fov,
+            fovy,
             world_to_cam,
+            perspective_center_distance,
         }
+    }
+
+    pub fn new_looking_at_origin_from(fovy: f32, init_droll: f32, init_dpitch: f32, init_dyaw: f32, distance: f32) -> Self {
+        let mut camera = Self::new_at_origin(fovy);
+
+        camera.rotate_roll(init_droll);
+        camera.rotate_pitch(init_dpitch);
+        camera.rotate_yaw(init_dyaw);
+        camera.translate_relative(Vector3::new(0.0, 0.0, -distance));
+
+        camera
     }
 
     pub fn world_to_cam(&self) -> &Matrix4<f32> {
@@ -150,4 +165,54 @@ impl Camera {
 
         self.world_to_cam = rotation_matrix * self.world_to_cam;
     }
+
+}
+
+//fait l'hypothèse que le segment et projetable dans son intégralité (devant le plan xy) et exprimé dans le repère de la caméra
+fn project_segment(points: (Vector3<f32>, Vector3<f32>), perspective_center_distance: f32) -> ((f32, f32), (f32, f32)) {
+    (project_point(points.0, perspective_center_distance), project_point(points.1, perspective_center_distance))
+}
+
+//fait l'hypothèse que le point est projetable (devant xy) et exprimé dans le repère de la caméra
+fn project_point(point: Vector3<f32>, perspective_center_distance: f32) -> (f32, f32) {
+    let point_distance_to_center = perspective_center_distance + point.z;
+
+    let dxdz = point.x / point_distance_to_center;
+    let dydz = point.y / point_distance_to_center;
+
+    let dx_proj = point.x + dxdz * point.z;
+    let dy_proj = point.y + dydz * point.z;
+
+    (point.x + dx_proj, point.y + dy_proj)
+}
+
+fn projected_to_pixel(x: f32, y: f32, width: i32, height: i32, aspect: f32) -> (i32, i32) {
+    let u = (x + aspect) / (2.0 * aspect);
+    let v = (1.0 - y) / 2.0;
+
+    let i = (u * (width as f32 - 1.0)).round() as i32;
+    let j = (v * (height as f32 - 1.0)).round() as i32;
+
+    (i, j)
+}
+
+//pour supprimer les segments situés derrière le plan de la camera (si un sengement coupe le plan, l'adapte pour qu'il soit projetable)
+fn adjust_segment_3d(points: (Vector3<f32>, Vector3<f32>)) -> Option<(Vector3<f32>, Vector3<f32>)> {
+    match (points.0.z >= 0.0, points.1.z >= 0.0) {
+        (true, true) => Some(points),
+        (true, false) => Some(adjusted_segment_3d(points.0, points.1)),
+        (false, true) => Some(adjusted_segment_3d(points.1, points.0)),
+        (false, false) => None,
+    }
+}
+
+//pour un segment donc p0 est situé devant le plan xy (z >= 0) et p1 derriere, tranlate p1 sur le segment de manière à le positionner sur xy
+fn adjusted_segment_3d(p0: Vector3<f32>, p1: Vector3<f32>) -> (Vector3<f32>, Vector3<f32>) {
+    let dxdz = (p1.x - p0.x) / (p1.z - p0.z);
+    let dydz = (p1.y - p0.y) / (p1.z - p0.z);
+
+    let dx_intersection = dxdz * -p0.z;
+    let dy_intersection = dydz * -p0.z;
+
+    (p0, Vector3::new(p0.x + dx_intersection, p0.y + dy_intersection, 0.0))
 }
