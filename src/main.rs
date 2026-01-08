@@ -43,8 +43,10 @@ impl Camera {
         let right = forward.cross(&up);
 
         let world_to_cam = Matrix4::new(
-            right.x, up.x, forward.x, 0.0, right.y, up.y, forward.y, 0.0, right.z, up.z, forward.z,
-            0.0, 0.0, 0.0, 0.0, 1.0,
+            right.x, up.x, forward.x, 0.0,
+            right.y, up.y, forward.y, 0.0, 
+            right.z, up.z, forward.z, 0.0,
+            0.0,     0.0,  0.0,       1.0,
         );
 
         Self {
