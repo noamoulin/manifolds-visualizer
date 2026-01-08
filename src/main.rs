@@ -1,5 +1,9 @@
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_4};
+
 use minifb::{Window, WindowOptions};
 use nalgebra::{Matrix4, Perspective3, Vector3};
+
+use crate::{drawing::draw_line, surfaces::SurfaceParam};
 
 mod drawing;
 mod surfaces;
@@ -16,7 +20,30 @@ fn main() {
     )
     .unwrap_or_else(|e| panic!("Echec lors de la création de fenêtre : {}", e));
 
+    let aspect = WIDTH as f32 / HEIGHT as f32;
+
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+
+    let s2 = SurfaceParam::new_sphere(10.);
+    let mut camera = Camera::new_at_origin(FRAC_PI_3);
+    camera.rotate_yaw(FRAC_PI_4);
+    camera.translate_relative(Vector3::new(0., 0., 25.));
+
+    let vertices = s2.isovertices(70, 35);
+
+    let vertices_for_camera = vertices.map(|points| camera.world_segment_to_camera_coordinates(points));
+    let visible = vertices_for_camera.flat_map(adjust_segment_3d);
+    let projected = visible.map(|points|project_segment(points, camera.perspective_center_distance));
+    let on_pixels_plane: Vec<_> = projected.map(|(p0, p1)| {
+        let p0_pixels = projected_to_pixel(p0.0, p0.1, WIDTH as i32, HEIGHT as i32, aspect);
+        let p1_pixels = projected_to_pixel(p1.0, p1.1, WIDTH as i32, HEIGHT as i32, aspect);
+
+        (p0_pixels, p1_pixels)
+    }).collect();
+
+    for (p0, p1) in on_pixels_plane {
+        draw_line(&mut buffer, WIDTH as i32, HEIGHT as i32, p0.0, p0.1, p1.0, p1.1, 0x00ff00);
+    }
 
     while window.is_open() && !window.is_key_down(minifb::Key::Escape) {
         window
@@ -44,9 +71,9 @@ impl Camera {
         let right = forward.cross(&up);
 
         let world_to_cam = Matrix4::new(
-            right.x, up.x, forward.x, 0.0,
-            right.y, up.y, forward.y, 0.0, 
-            right.z, up.z, forward.z, 0.0,
+            right.x, right.y, right.z, 0.0,
+            up.x, up.y, up.z, 0.0, 
+            forward.x, forward.y, forward.z, 0.0,
             0.0,     0.0,  0.0,       1.0,
         );
 
@@ -88,7 +115,8 @@ impl Camera {
         );
 
         self.pos += dp;
-        self.world_to_cam = self.world_to_cam * translation_matrix;
+        self.world_to_cam = translation_matrix * self.world_to_cam;
+
     }
 
     //effectue une translation de la camera dans le monde, selon un vecteur exprimé dans le repère de la caméra
@@ -161,11 +189,22 @@ impl Camera {
         let rotation_only = rotation_matrix.fixed_view::<3, 3>(0, 0);
 
         self.forward = rotation_only * self.forward;
-        self.right = rotation_only * self.forward;
+        self.right = rotation_only * self.right;
 
         self.world_to_cam = rotation_matrix * self.world_to_cam;
     }
 
+    fn world_segment_to_camera_coordinates(&self, points: (Vector3<f32>, Vector3<f32>)) -> (Vector3<f32>, Vector3<f32>) {
+        (self.world_point_to_camera_coordinates(points.0), self.world_point_to_camera_coordinates(points.1))
+    }
+
+    fn world_point_to_camera_coordinates(&self, point: Vector3<f32>) -> Vector3<f32> {
+        let mut homogeneous = point.to_homogeneous();
+        homogeneous.w = 1.0;
+        let from_cam = self.world_to_cam * homogeneous;
+
+        Vector3::new(from_cam.x, from_cam.y, from_cam.z)
+    }
 }
 
 //fait l'hypothèse que le segment et projetable dans son intégralité (devant le plan xy) et exprimé dans le repère de la caméra
@@ -173,17 +212,10 @@ fn project_segment(points: (Vector3<f32>, Vector3<f32>), perspective_center_dist
     (project_point(points.0, perspective_center_distance), project_point(points.1, perspective_center_distance))
 }
 
-//fait l'hypothèse que le point est projetable (devant xy) et exprimé dans le repère de la caméra
-fn project_point(point: Vector3<f32>, perspective_center_distance: f32) -> (f32, f32) {
-    let point_distance_to_center = perspective_center_distance + point.z;
-
-    let dxdz = point.x / point_distance_to_center;
-    let dydz = point.y / point_distance_to_center;
-
-    let dx_proj = point.x + dxdz * point.z;
-    let dy_proj = point.y + dydz * point.z;
-
-    (point.x + dx_proj, point.y + dy_proj)
+fn project_point(point: Vector3<f32>, f: f32) -> (f32, f32) {
+    let x_proj = f * point.x / point.z;
+    let y_proj = f * point.y / point.z;
+    (x_proj, y_proj)
 }
 
 fn projected_to_pixel(x: f32, y: f32, width: i32, height: i32, aspect: f32) -> (i32, i32) {

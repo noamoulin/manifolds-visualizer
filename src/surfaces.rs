@@ -30,6 +30,23 @@ impl SurfaceParam {
         SurfaceParam::new(Box::new(f), (-PI, PI), (-FRAC_PI_2, FRAC_PI_2))
     }
 
+    pub fn new_torus(R: f32, r: f32) -> Self {
+        let f = move |u: f32, v: f32| {
+            let cos_u = u.cos();
+            let sin_u = u.sin();
+            let cos_v = v.cos();
+            let sin_v = v.sin();
+    
+            let x = (R + r * cos_v) * cos_u;
+            let y = (R + r * cos_v) * sin_u;
+            let z = r * sin_v;
+    
+            Vector3::new(x, y, z)
+        };
+    
+        SurfaceParam::new(Box::new(f), (0.0, 2.0 * PI), (0.0, 2.0 * PI))
+    }
+
     //segments dans tout l'intervalle sous-echantilloné des u pour chaque valeurs du sous echantillonage des v
     pub fn isos_v(
         &self,
