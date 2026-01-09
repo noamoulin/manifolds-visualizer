@@ -1,5 +1,4 @@
 use nalgebra::{Matrix4, Vector3};
-
 use crate::EPSILON;
 
 pub struct Camera {
@@ -49,10 +48,6 @@ impl Camera {
         camera
     }
 
-    pub fn world_to_cam(&self) -> &Matrix4<f32> {
-        &self.world_to_cam
-    }
-
     //effectue une translation de la caméra dans le monde, selon un vecteur exprimé dans le repère du monde
     pub fn translate_absolute(&mut self, dp: Vector3<f32>) {
         let translation_matrix = Matrix4::new(
@@ -64,7 +59,6 @@ impl Camera {
 
         self.pos += dp;
         self.world_to_cam = self.world_to_cam * translation_matrix;
-
     }
 
     //effectue une translation de la camera dans le monde, selon un vecteur exprimé dans le repère de la caméra
@@ -99,7 +93,7 @@ impl Camera {
          self.up = rotation_only * self.up;
          self.right = rotation_only * self.right;
 
-         self.world_to_cam = rotation_matrix * self.world_to_cam;
+         self.world_to_cam = self.world_to_cam * rotation_matrix;
     }
 
     //rotation de la camera sur son vecteur "droite" (axe x de son repère)
@@ -119,7 +113,7 @@ impl Camera {
         self.forward = rotation_only * self.forward;
         self.up = rotation_only * self.up;
 
-        self.world_to_cam = rotation_matrix * self.world_to_cam;
+        self.world_to_cam = self.world_to_cam * rotation_matrix;
     }
 
     //rotation de la camera sur son vecteur "haut" (axe y de son repère)
@@ -129,9 +123,9 @@ impl Camera {
 
         let rotation_matrix = Matrix4::new(
             cos_psi, 0.0, -sin_psi, 0.0,
-            0.0,       1.0, 0.0,        0.0,
+            0.0,     1.0, 0.0,      0.0,
             sin_psi, 0.0, cos_psi,  0.0,
-            0.0,       0.0, 0.0,        1.0
+            0.0,     0.0, 0.0,      1.0
         );
 
         let rotation_only = rotation_matrix.fixed_view::<3, 3>(0, 0);
@@ -139,7 +133,7 @@ impl Camera {
         self.forward = rotation_only * self.forward;
         self.right = rotation_only * self.right;
 
-        self.world_to_cam =   rotation_matrix * self.world_to_cam;
+        self.world_to_cam = self.world_to_cam * rotation_matrix;
     }
 
     pub fn world_segment_to_camera_coordinates(&self, points: (Vector3<f32>, Vector3<f32>)) -> (Vector3<f32>, Vector3<f32>) {

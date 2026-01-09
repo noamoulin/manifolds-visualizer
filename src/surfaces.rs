@@ -67,7 +67,7 @@ impl SurfaceParam {
             (-w, w),
         )
     }
-
+    
     //segments dans tout l'intervalle sous-echantilloné des u pour chaque valeurs du sous echantillonage des v
     pub fn isos_v(
         &self,
