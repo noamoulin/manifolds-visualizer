@@ -25,7 +25,7 @@ fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
     let s2 = SurfaceParam::new_torus(10.0, 4.0);
-    let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, FRAC_PI_4, 0.0, -25.0);
+    let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, 0.0, 0.0, 25.0);
 
     let vertices: Vec<_> = s2.isovertices(70, 35).collect();
 
@@ -65,10 +65,10 @@ fn main() {
                 camera.translate_relative(Vector3::new(-speed, 0.0, 0.0));
             }
             if window.is_key_down(minifb::Key::Up) {
-                camera.rotate_roll(angle_speed);
+                camera.rotate_pitch(angle_speed);
             }
             if window.is_key_down(minifb::Key::Down) {
-                camera.rotate_roll(-angle_speed);
+                camera.rotate_pitch(-angle_speed);
             }
             if window.is_key_down(minifb::Key::Left) {
                 camera.rotate_yaw(-angle_speed);

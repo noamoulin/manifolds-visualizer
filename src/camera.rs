@@ -2,37 +2,21 @@ use nalgebra::{Matrix4, Vector3};
 use crate::EPSILON;
 
 pub struct Camera {
-    pos: Vector3<f32>,
-    forward: Vector3<f32>,
-    up: Vector3<f32>,
-    right: Vector3<f32>,
-    pub(crate) perspective_center_distance: f32,
+    pub perspective_center_distance: f32,
     world_to_cam: Matrix4<f32>,
+    cam_to_world: Matrix4<f32>,
 }
 
 impl Camera {
-    //camera à (0, O, 0) regardant vers (0, 0, -1), up vers (0, 1, 0)
     pub fn new_at_origin(fovy: f32) -> Self {
-        let pos = Vector3::new(0.0, 0.0, 0.0);
-        let forward = Vector3::new(0.0, 0.0, -1.0);
-        let up = Vector3::new(0.0, 1.0, 0.0);
-        let right = forward.cross(&up);
-
-        let world_to_cam = Matrix4::new(
-            right.x, right.y, right.z, 0.0,
-            up.x, up.y, up.z, 0.0, 
-            forward.x, forward.y, forward.z, 0.0,
-            0.0,     0.0,  0.0,       1.0,
-        );
+        let cam_to_world = Matrix4::identity();
+        let world_to_cam = Matrix4::identity();
 
         let perspective_center_distance = 1.0 / (fovy / 2.0).tan();
 
         Self {
-            pos,
-            forward,
-            up,
-            right,
             world_to_cam,
+            cam_to_world,
             perspective_center_distance,
         }
     }
@@ -48,6 +32,10 @@ impl Camera {
         camera
     }
 
+    fn update_world_to_cam(&mut self) {
+        self.world_to_cam = self.cam_to_world.try_inverse().unwrap();
+    }
+
     //effectue une translation de la caméra dans le monde, selon un vecteur exprimé dans le repère du monde
     pub fn translate_absolute(&mut self, dp: Vector3<f32>) {
         let translation_matrix = Matrix4::new(
@@ -57,8 +45,8 @@ impl Camera {
             0.0, 0.0, 0.0, 1.0
         );
 
-        self.pos += dp;
-        self.world_to_cam = self.world_to_cam * translation_matrix;
+        self.cam_to_world = translation_matrix * self.cam_to_world;
+        self.update_world_to_cam();
     }
 
     //effectue une translation de la camera dans le monde, selon un vecteur exprimé dans le repère de la caméra
@@ -70,10 +58,8 @@ impl Camera {
             0.0, 0.0, 0.0, 1.0
         );
 
-        self.world_to_cam = translation_matrix * self.world_to_cam;
-        let cam_to_world_rot = self.world_to_cam.fixed_view::<3, 3>(0, 0).transpose();
-        let abs_dp = cam_to_world_rot * dp;
-        self.pos += abs_dp;
+        self.cam_to_world = self.cam_to_world * translation_matrix;
+        self.update_world_to_cam();
     }
 
     //rotation de la camera sur son vecteur "devant" (axe z de son repère)
@@ -88,12 +74,8 @@ impl Camera {
             0.0,     0.0,      0.0, 1.0,
          );
 
-         let rotation_only = rotation_matrix.fixed_view::<3, 3>(0, 0);
-
-         self.up = rotation_only * self.up;
-         self.right = rotation_only * self.right;
-
-         self.world_to_cam = self.world_to_cam * rotation_matrix;
+         self.cam_to_world = self.cam_to_world * rotation_matrix;
+         self.update_world_to_cam();
     }
 
     //rotation de la camera sur son vecteur "droite" (axe x de son repère)
@@ -108,12 +90,8 @@ impl Camera {
             0.0, 0.0, 0.0, 1.0,
         );
 
-        let rotation_only = rotation_matrix.fixed_view::<3, 3>(0, 0);
-
-        self.forward = rotation_only * self.forward;
-        self.up = rotation_only * self.up;
-
-        self.world_to_cam = self.world_to_cam * rotation_matrix;
+        self.cam_to_world = self.cam_to_world * rotation_matrix;
+        self.update_world_to_cam();
     }
 
     //rotation de la camera sur son vecteur "haut" (axe y de son repère)
@@ -128,12 +106,8 @@ impl Camera {
             0.0,     0.0, 0.0,      1.0
         );
 
-        let rotation_only = rotation_matrix.fixed_view::<3, 3>(0, 0);
-
-        self.forward = rotation_only * self.forward;
-        self.right = rotation_only * self.right;
-
-        self.world_to_cam = self.world_to_cam * rotation_matrix;
+        self.cam_to_world = self.cam_to_world * rotation_matrix;
+        self.update_world_to_cam();
     }
 
     pub fn world_segment_to_camera_coordinates(&self, points: (Vector3<f32>, Vector3<f32>)) -> (Vector3<f32>, Vector3<f32>) {
