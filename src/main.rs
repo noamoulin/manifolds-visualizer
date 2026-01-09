@@ -7,7 +7,7 @@ mod drawing;
 mod surfaces;
 mod camera;
 
-pub const WIDTH: usize = 1500;
+pub const WIDTH: usize = 1000;
 pub const HEIGHT: usize = 800;
 pub const EPSILON: f32 = 0.1;
 
@@ -27,16 +27,7 @@ fn main() {
     let s2 = SurfaceParam::new_sphere(10.0);
     let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, FRAC_PI_4, 0.0, -25.0);
 
-    let mut vertices: Vec<_> = s2.isovertices(70, 35).collect();
-
-    let axis_len = 25.0;
-    let axes: Vec<(Vector3<f32>, Vector3<f32>)> = vec![
-        (Vector3::new(0.0, 0.0, 0.0), Vector3::new(axis_len, 0.0, 0.0)),
-        (Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, axis_len, 0.0)),
-        (Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, axis_len)),
-    ];
-
-    vertices.extend(axes.into_iter());
+    let vertices: Vec<_> = s2.isovertices(60, 30).collect();
 
     while window.is_open() && !window.is_key_down(minifb::Key::Escape) {
         window

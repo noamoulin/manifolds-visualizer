@@ -47,6 +47,27 @@ impl SurfaceParam {
         SurfaceParam::new(Box::new(f), (0.0, 2.0 * PI), (0.0, 2.0 * PI))
     }
 
+    pub fn new_mobius(R: f32, w: f32) -> Self {
+        let f = move |u: f32, v: f32| {
+            let cos_u = u.cos();
+            let sin_u = u.sin();
+            let cos_u2 = (u * 0.5).cos();
+            let sin_u2 = (u * 0.5).sin();
+
+            let x = (R + v * cos_u2) * cos_u;
+            let y = (R + v * cos_u2) * sin_u;
+            let z = v * sin_u2;
+
+            Vector3::new(x, y, z)
+        };
+
+        SurfaceParam::new(
+            Box::new(f),
+            (0.0, 2.0 * PI),   // u
+            (-w, w),           // v
+        )
+    }
+
     //segments dans tout l'intervalle sous-echantilloné des u pour chaque valeurs du sous echantillonage des v
     pub fn isos_v(
         &self,
