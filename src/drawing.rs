@@ -8,7 +8,6 @@ pub fn draw_line(
     y1: i32,
     color: u32,
 ) {
-    //println!("{:?}, {:?}", x1, x0);
     let dx = (x1 - x0).abs();
     let dy = (y1 - y0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
@@ -16,7 +15,6 @@ pub fn draw_line(
     let mut err = dx - dy;
 
     loop {
-        // Écrire dans le buffer seulement si valide
         if 0 <= x0 && x0 < width && 0 <= y0 && y0 < height {
             let idx = (y0 as usize) * (width as usize) + (x0 as usize);
             buffer[idx] = color;
