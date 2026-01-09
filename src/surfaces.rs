@@ -63,8 +63,8 @@ impl SurfaceParam {
 
         SurfaceParam::new(
             Box::new(f),
-            (0.0, 2.0 * PI),   // u
-            (-w, w),           // v
+            (0.0, 2.0 * PI),
+            (-w, w),
         )
     }
 
