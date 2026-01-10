@@ -7,6 +7,7 @@ pub mod surfaces;
 pub mod pointclouds;
 
 const DEFAULT_LINE_COLOR: u32 = 0xffffff;
+const DEFAULT_POINT_COLOR: u32 = 0x00ff00;
 
 #[derive(Constructor)]
 pub struct Object {
@@ -95,10 +96,10 @@ pub enum Geometry {
 }
 
 impl Geometry {
-    pub fn primitives(&self) -> impl Iterator<Item = Primitive3f> {
+    pub fn primitives(&self) -> impl Iterator<Item = Primitive3f> + '_ {
         match self {
-            Geometry::Surface(surface) => surface.isolines().map(Primitive3f::from),
-            Geometry::PointCloud(cloud) => todo!()
+            Geometry::Surface(surface) => either::Left(surface.isolines().map(Primitive3f::from)),
+            Geometry::PointCloud(cloud) => either::Right(cloud.points().map(Primitive3f::from)),
         }
     }
 }
@@ -106,6 +107,12 @@ impl Geometry {
 impl From<(Vector3<f32>, Vector3<f32>)> for Primitive3f {
     fn from(value: (Vector3<f32>, Vector3<f32>)) -> Self {
         Self::Line(Line3f::new(Point3f::new(value.0, DEFAULT_LINE_COLOR), Point3f::new(value.1, DEFAULT_LINE_COLOR))) //blanc par defaut
+    }
+}
+
+impl From<Vector3<f32>> for Primitive3f {
+    fn from(value: Vector3<f32>) -> Self {
+        Self::Point(Point3f::new(value, DEFAULT_LINE_COLOR)) //blanc par defaut
     }
 }
 
