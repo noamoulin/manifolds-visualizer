@@ -17,14 +17,14 @@ fn main() {
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
-    let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, 0.0, 0.0, 1000.);
+    let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, 0.0, 0.0, 100.);
 
-    //let mut s2 = Object::new(Geometry::Surface(Surface::new_sphere(10.0, 60, 30)), Matrix4::identity(), 0x00ff00);
-    let mut t2 = Object::new(Geometry::Surface(Surface::new_torus(500.0, 300.0, 100, 50)), Matrix4::identity(), 0xff0000);
+    let mut s2 = Object::new(Geometry::Surface(Surface::new_sphere(100.0, 60, 30)), Matrix4::identity(), 0xffffff);
+    //let mut t2 = Object::new(Geometry::Surface(Surface::new_torus(500.0, 5.0, 100, 50)), Matrix4::identity(), 0xff0000);
 
-    let cloud = PointCloud::new_from_path("./scan.ply").unwrap();
+    let cloud = PointCloud::new_from_path("./jardin.ply").unwrap();
 
-    let mut p3 = Object::new(Geometry::PointCloud(cloud), Matrix4::identity(), 0x00ff00);
+    let mut p3 = Object::new(Geometry::PointCloud(cloud), Matrix4::identity(), 0xffffff);
 
     while window.is_open() && !window.is_key_down(minifb::Key::Escape) {
         window
@@ -34,15 +34,15 @@ fn main() {
             buffer = vec![0; WIDTH * HEIGHT];
 
             object_to_screen_primitives(&p3, &camera, WIDTH, HEIGHT)
-                .chain(object_to_screen_primitives(&t2, &camera, WIDTH, HEIGHT))
+                //.chain(object_to_screen_primitives(&t2, &camera, WIDTH, HEIGHT))
                 .for_each(|primitive| draw_primitive(primitive, &mut buffer, WIDTH, HEIGHT));
 
-            let speed = 20.;
-            let angle_speed = 0.006;
+            let speed = 0.5;
+            let angle_speed = 0.005;
 
-            t2.rotate_x(angle_speed);
-            t2.rotate_y(angle_speed);
-            t2.rotate_z(angle_speed);
+            //p3.rotate_x(angle_speed);
+            //p3.rotate_y(angle_speed);
+            //p3.rotate_z(angle_speed);
 
             if window.is_key_down(minifb::Key::W) {
                 camera.translate_relative(Vector3::new(0.0, 0.0, speed));

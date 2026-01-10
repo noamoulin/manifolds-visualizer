@@ -84,6 +84,7 @@ pub fn draw_line(
 fn draw_point(buffer: &mut [u32], point: Point2i, width: i32, height: i32) {
     if point.p.0 >= 0 && point.p.0 < width && point.p.1 >=0 && point.p.1 < height {
         let idx = (point.p.1 as usize) * (width as usize) + (point.p.0 as usize);
+
         buffer[idx] = point.color;
     }
 }

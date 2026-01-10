@@ -7,7 +7,6 @@ pub mod surfaces;
 pub mod pointclouds;
 
 const DEFAULT_LINE_COLOR: u32 = 0xffffff;
-const DEFAULT_POINT_COLOR: u32 = 0x00ff00;
 
 #[derive(Constructor)]
 pub struct Object {
@@ -116,20 +115,39 @@ impl From<Vector3<f32>> for Primitive3f {
     }
 }
 
+impl From<Point3f> for Primitive3f {
+    fn from(value: Point3f) -> Self {
+        Self::Point(value)
+    }
+}
+
 pub enum Primitive3f {
     Line(Line3f),
     Point(Point3f),
 }
 
 impl Primitive3f {
+    //ajoute de la coouleur si il n'y en a pas
     fn with_color(self, color: u32) -> Self  {
-        match self {
+        match &self {
             Self::Line(line) => {
-                let p0 = Point3f::new(line.p0.p, color);
-                let p1 = Point3f::new(line.p1.p, color);
-                Self::Line(Line3f::new(p0, p1))
+                if line.p0.color > 0 {
+                    self
+                }
+                else {
+                    let p0 = Point3f::new(line.p0.p, color);
+                    let p1 = Point3f::new(line.p1.p, color);
+                    Self::Line(Line3f::new(p0, p1))
+                }
             }
-            Self::Point(point) => Self::Point(Point3f::new(point.p, color)),
+            Self::Point(point) => {
+                if point.color > 0 {
+                    self
+                }
+                else {
+                    Self::Point(Point3f::new(point.p, color))
+                }
+            },
         }
     }
 
@@ -166,7 +184,7 @@ impl Line3f {
     }
 }
 
-#[derive(Constructor)]
+#[derive(Constructor, Clone)]
 pub struct Point3f {
     pub p: Vector3<f32>,
     pub color: u32,
