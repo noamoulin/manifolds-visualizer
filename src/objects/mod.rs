@@ -11,13 +11,59 @@ const DEFAULT_LINE_COLOR: u32 = 0xffffff;
 #[derive(Constructor)]
 pub struct Object {
     geometry: Geometry,
-    transform: Matrix4<f32>,
+    pub local_to_world: Matrix4<f32>,
     color: u32,
 }
 
 impl Object {
-    pub fn primitives(&self) -> impl Iterator<Item = Primitive3f> {
+    pub fn raw_primitives(&self) -> impl Iterator<Item = Primitive3f> {
         self.geometry.primitives().map(|elm| elm.with_color(self.color))
+    }
+
+    pub fn primitives(&self) -> impl Iterator<Item = Primitive3f> {
+        self.raw_primitives().map(|p| p.transformed(self.local_to_world))
+    }
+
+    pub fn rotate_x(&mut self, d_angle: f32) {
+        let cos = d_angle.cos();
+        let sin = d_angle.sin();
+
+        let rotation_matrix = Matrix4::new(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, cos, -sin,0.0,
+            0.0, sin, cos, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        );
+
+        self.local_to_world = self.local_to_world * rotation_matrix;
+    }
+
+    pub fn rotate_y(&mut self, d_angle: f32) {
+        let cos = d_angle.cos();
+        let sin = d_angle.sin();
+
+        let rotation_matrix = Matrix4::new(
+            cos, 0.0, -sin, 0.0,
+            0.0, 1.0, 0.0,  0.0,
+            sin, 0.0, cos,  0.0,
+            0.0, 0.0, 0.0,  1.0
+        );
+
+        self.local_to_world = self.local_to_world * rotation_matrix;
+    }
+
+    pub fn rotate_z(&mut self, d_angle: f32) {
+        let cos = d_angle.cos();
+        let sin = d_angle.sin();
+
+        let rotation_matrix = Matrix4::new(
+            cos, -sin, 0.0, 0.0,
+            sin, cos,  0.0, 0.0,
+            0.0, 0.0,  1.0, 0.0,
+            0.0, 0.0,  0.0, 1.0,
+         );
+
+         self.local_to_world = self.local_to_world * rotation_matrix;
     }
 }
 
@@ -47,16 +93,28 @@ pub enum Primitive3f {
 }
 
 impl Primitive3f {
-    fn with_color(mut self, color: u32) -> Self{
-        match &mut self {
-            Primitive3f::Line(line) => {
-                line.p0.color = color;
-                line.p1.color = color;
+    fn with_color(self, color: u32) -> Self  {
+        match self {
+            Self::Line(line) => {
+                let p0 = Point3f::new(line.p0.p, color);
+                let p1 = Point3f::new(line.p1.p, color);
+                Self::Line(Line3f::new(p0, p1))
             }
-            Primitive3f::Point(point) => point.color = color,
+            Self::Point(point) => Self::Point(Point3f::new(point.p, color)),
         }
+    }
 
-        self
+    fn transformed(self, transform: Matrix4<f32>) -> Self {
+        match self {
+            Primitive3f::Point(point) => Primitive3f::Point(point.transformed(transform)),
+
+            Primitive3f::Line(line) => {
+                let p0 = line.p0.transformed(transform);
+                let p1 = line.p1.transformed(transform);
+
+                Primitive3f::Line(Line3f::new(p0, p1))
+            }
+        }
     }
 }
 
@@ -83,4 +141,14 @@ impl Line3f {
 pub struct Point3f {
     pub p: Vector3<f32>,
     pub color: u32,
+}
+
+impl Point3f {
+    pub fn transformed(self, transform: Matrix4<f32>) -> Self {
+        let mut homogeneous = self.p.to_homogeneous();
+        homogeneous.w = 1.0;
+
+        let homogeneous = transform * homogeneous;
+        Self::new(Vector3::<f32>::new(homogeneous.x, homogeneous.y, homogeneous.z), self.color)
+    }
 }

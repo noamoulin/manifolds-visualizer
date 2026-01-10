@@ -19,7 +19,7 @@ fn main() {
 
     let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, 0.0, 0.0, 25.0);
 
-    let t2 = Object::new(Geometry::Surface(Surface::new_mobius(10.0, 3.0, 70, 35)), Matrix4::identity(), 0x00ff00);
+    let mut t2 = Object::new(Geometry::Surface(Surface::new_mobius(10.0, 3.0, 70, 35)), Matrix4::identity(), 0x00ff00);
 
     while window.is_open() && !window.is_key_down(minifb::Key::Escape) {
         window
@@ -33,6 +33,10 @@ fn main() {
 
             let speed = 0.2;
             let angle_speed = 0.002;
+
+            t2.rotate_x(angle_speed);
+            t2.rotate_y(angle_speed);
+            t2.rotate_z(angle_speed);
 
             if window.is_key_down(minifb::Key::W) {
                 camera.translate_relative(Vector3::new(0.0, 0.0, speed));
