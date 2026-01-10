@@ -28,6 +28,30 @@ impl Surface {
         Self {parts, u_points_number, v_points_number}
     }
 
+    pub fn new_cube_sphere(r: f32, n: u32) -> Self {
+        let parts = (0..6)
+            .map(|i| SurfaceParam::cube_sphere_face(r, i))
+            .collect();
+
+        Self {
+            parts,
+            u_points_number: n,
+            v_points_number: n,
+        }
+    }
+
+    pub fn new_boy(scale: f32, u: u32, v: u32) -> Self {
+        let parts = vec![
+            SurfaceParam::new_boy(scale),
+        ];
+
+        Self {
+            parts,
+            u_points_number: u,
+            v_points_number: v,
+        }
+    }
+
     pub fn isos_u(&self) -> impl Iterator<Item = (Vector3<f32>, Vector3<f32>)> {
         self.parts.iter().flat_map(move |p| p.isos_u(self.u_points_number, self.v_points_number))
     }
@@ -104,6 +128,53 @@ impl SurfaceParam {
             Box::new(f),
             (0.0, 2.0 * PI),
             (-w, w),
+        )
+    }
+
+    pub fn cube_sphere_face(r: f32, face: usize) -> Self {
+        let f = move |u: f32, v: f32| {
+            let x = u;
+            let y = v;
+
+            let p = match face {
+                0 => Vector3::new( 1.0,  x,  y),
+                1 => Vector3::new(-1.0,  x,  y),
+                2 => Vector3::new( x,  1.0,  y),
+                3 => Vector3::new( x, -1.0,  y),
+                4 => Vector3::new( x,  y,  1.0),
+                _ => Vector3::new( x,  y, -1.0),
+            };
+
+            let p = p.normalize();
+            r * p
+        };
+
+        SurfaceParam::new(Box::new(f), (-1.0, 1.0), (-1.0, 1.0))
+    }
+
+    pub fn new_boy(scale: f32) -> Self {
+        let f = move |u: f32, v: f32| {
+            let su = u.sin();
+            let cu = u.cos();
+            let s2u = (2.0 * u).sin();
+            let c2u = (2.0 * u).cos();
+
+            let cv = v.cos();
+            let sv = v.sin();
+            let c2v = (2.0 * v).cos();
+            let s2v = (2.0 * v).sin();
+
+            let x = 0.5 * (su * cv + s2u * c2v);
+            let y = 0.5 * (su * sv - s2u * s2v);
+            let z = 0.5 * (cu - c2u);
+
+            scale * Vector3::new(x, y, z)
+        };
+
+        SurfaceParam::new(
+            Box::new(f),
+            (0.0, PI),
+            (0.0, 2.0 * PI),
         )
     }
     

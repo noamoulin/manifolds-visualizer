@@ -1,4 +1,4 @@
-use std::f32::consts::FRAC_PI_3;
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_3};
 use minifb::{Window, WindowOptions};
 use nalgebra::{Matrix4, Vector3};
 use crate::{camera::{Camera, filter_primitive_3d, project_primitive}, drawing::{Primitive2i, draw_primitive, projected_primitive_to_screen_primitive}, objects::{Geometry, Object, surfaces::Surface}};
@@ -19,7 +19,7 @@ fn main() {
 
     let mut camera = Camera::new_looking_at_origin_from(FRAC_PI_3, 0.0, 0.0, 0.0, 25.0);
 
-    let mut t2 = Object::new(Geometry::Surface(Surface::new_mobius(10.0, 3.0, 70, 35)), Matrix4::identity(), 0x00ff00);
+    let mut t2 = Object::new(Geometry::Surface(Surface::new_boy(10.0, 120, 60)), Matrix4::identity(), 0x00ff00);
 
     while window.is_open() && !window.is_key_down(minifb::Key::Escape) {
         window

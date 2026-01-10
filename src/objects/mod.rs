@@ -65,6 +65,28 @@ impl Object {
 
          self.local_to_world = self.local_to_world * rotation_matrix;
     }
+
+    pub fn translate_relative(&mut self, dp: Vector3<f32>) {
+        let translation_matrix = Matrix4::new(
+            1.0, 0.0, 0.0, dp.x,
+            0.0, 1.0, 0.0, dp.y,
+            0.0, 0.0, 1.0, dp.z,
+            0.0, 0.0, 0.0, 1.0
+        );
+
+        self.local_to_world = self.local_to_world * translation_matrix;
+    }
+
+    pub fn translate_absolute(&mut self, dp: Vector3<f32>) {
+        let translation_matrix = Matrix4::new(
+            1.0, 0.0, 0.0, dp.x,
+            0.0, 1.0, 0.0, dp.y,
+            0.0, 0.0, 1.0, dp.z,
+            0.0, 0.0, 0.0, 1.0
+        );
+
+        self.local_to_world = translation_matrix * self.local_to_world;
+    }
 }
 
 pub enum Geometry {
