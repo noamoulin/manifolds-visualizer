@@ -1,8 +1,47 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-
 use derive_more::Constructor;
 use itertools::Itertools;
 use nalgebra::Vector3;
+
+pub struct Surface {
+    parts: Vec<SurfaceParam>,
+    u_points_number: u32,
+    v_points_number: u32,
+}
+
+impl Surface {
+    pub fn new_sphere(r: f32, u_points_number: u32, v_points_number: u32) -> Self {
+        let parts = vec![SurfaceParam::new_sphere(r)];
+
+        Self {parts, u_points_number, v_points_number}
+    }
+
+    pub fn new_torus(r: f32, r_rev: f32, u_points_number: u32, v_points_number: u32) -> Self {
+        let parts = vec![SurfaceParam::new_torus(r, r_rev)];
+
+        Self {parts, u_points_number, v_points_number}
+    }
+
+    pub fn new_mobius(r: f32, w: f32, u_points_number: u32, v_points_number: u32) -> Self {
+        let parts = vec![SurfaceParam::new_mobius(r, w)];
+
+        Self {parts, u_points_number, v_points_number}
+    }
+
+    pub fn isos_u(&self) -> impl Iterator<Item = (Vector3<f32>, Vector3<f32>)> {
+        self.parts.iter().flat_map(move |p| p.isos_u(self.u_points_number, self.v_points_number))
+    }
+
+    pub fn isos_v(&self) -> impl Iterator<Item = (Vector3<f32>, Vector3<f32>)> {
+        self.parts.iter().flat_map(move |p| p.isos_v(self.u_points_number, self.v_points_number))
+    }
+
+    pub fn isolines(
+        &self,
+    ) -> impl Iterator<Item = (Vector3<f32>, Vector3<f32>)> {
+        self.parts.iter().flat_map(move |p| p.isos_u(self.u_points_number, self.v_points_number).chain(p.isos_v(self.v_points_number, self.u_points_number)))
+    }
+}
 
 #[derive(Constructor)]
 pub struct SurfaceParam {
@@ -30,16 +69,16 @@ impl SurfaceParam {
         SurfaceParam::new(Box::new(f), (-PI, PI), (-FRAC_PI_2, FRAC_PI_2))
     }
 
-    pub fn new_torus(R: f32, r: f32) -> Self {
+    pub fn new_torus(r: f32, r_rev: f32) -> Self {
         let f = move |u: f32, v: f32| {
             let cos_u = u.cos();
             let sin_u = u.sin();
             let cos_v = v.cos();
             let sin_v = v.sin();
     
-            let x = (R + r * cos_v) * cos_u;
-            let y = (R + r * cos_v) * sin_u;
-            let z = r * sin_v;
+            let x = (r + r_rev * cos_v) * cos_u;
+            let y = (r + r_rev * cos_v) * sin_u;
+            let z = r_rev * sin_v;
     
             Vector3::new(x, y, z)
         };
@@ -47,15 +86,15 @@ impl SurfaceParam {
         SurfaceParam::new(Box::new(f), (0.0, 2.0 * PI), (0.0, 2.0 * PI))
     }
 
-    pub fn new_mobius(R: f32, w: f32) -> Self {
+    pub fn new_mobius(r: f32, w: f32) -> Self {
         let f = move |u: f32, v: f32| {
             let cos_u = u.cos();
             let sin_u = u.sin();
             let cos_u2 = (u * 0.5).cos();
             let sin_u2 = (u * 0.5).sin();
 
-            let x = (R + v * cos_u2) * cos_u;
-            let y = (R + v * cos_u2) * sin_u;
+            let x = (r + v * cos_u2) * cos_u;
+            let y = (r + v * cos_u2) * sin_u;
             let z = v * sin_u2;
 
             Vector3::new(x, y, z)
@@ -105,7 +144,7 @@ impl SurfaceParam {
     }
 
     //isos_u U isos_v -> the wireframe
-    pub fn isovertices(
+    pub fn isolines(
         &self,
         u_points_number: u32,
         v_points_number: u32,

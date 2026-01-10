@@ -1,10 +1,28 @@
+use derive_more::Constructor;
 use nalgebra::{Matrix4, Vector3};
-use crate::EPSILON;
+use crate::{EPSILON, objects::{Line3f, Point3f, Primitive3f}};
 
 pub struct Camera {
     pub perspective_center_distance: f32,
     world_to_cam: Matrix4<f32>,
     cam_to_world: Matrix4<f32>,
+}
+
+pub enum Primitive2f {
+    Line(Line2f),
+    Point(Point2f),
+}
+
+#[derive(Constructor)]
+pub struct Line2f {
+    pub p0: Point2f,
+    pub p1: Point2f,
+}
+
+#[derive(Constructor)]
+pub struct Point2f {
+    pub p: (f32, f32),
+    pub color: u32,
 }
 
 impl Camera {
@@ -110,57 +128,71 @@ impl Camera {
         self.update_world_to_cam();
     }
 
-    pub fn world_segment_to_camera_coordinates(&self, points: (Vector3<f32>, Vector3<f32>)) -> (Vector3<f32>, Vector3<f32>) {
-        (self.world_point_to_camera_coordinates(points.0), self.world_point_to_camera_coordinates(points.1))
+    pub fn world_line_to_camera_coordinates(&self, line: Line3f) -> Line3f {
+        Line3f::new(self.world_point_to_camera_coordinates(line.p0), self.world_point_to_camera_coordinates(line.p1))
     }
 
-    fn world_point_to_camera_coordinates(&self, point: Vector3<f32>) -> Vector3<f32> {
-        let mut homogeneous = point.to_homogeneous();
+    fn world_point_to_camera_coordinates(&self, point: Point3f) -> Point3f {
+        let mut homogeneous = point.p.to_homogeneous();
         homogeneous.w = 1.0;
         let from_cam = self.world_to_cam * homogeneous;
 
-        Vector3::new(from_cam.x, from_cam.y, from_cam.z)
+        Point3f::new(Vector3::new(from_cam.x, from_cam.y, from_cam.z), point.color)
+    }
+
+    pub fn world_primitive_to_camera_coordinates(&self, primitive: Primitive3f) -> Primitive3f {
+        match primitive {
+            Primitive3f::Line(line) => Primitive3f::Line(self.world_line_to_camera_coordinates(line)),
+            Primitive3f::Point(point) => Primitive3f::Point(self.world_point_to_camera_coordinates(point)),
+        }
+    }
+}
+
+pub fn project_primitive(primitive: Primitive3f, perspective_center_distance: f32) -> Primitive2f {
+    match primitive {
+        Primitive3f::Line(line) => Primitive2f::Line(project_line(line, perspective_center_distance)),
+        Primitive3f::Point(point) => Primitive2f::Point(project_point(point, perspective_center_distance)),
     }
 }
 
 //fait l'hypothèse que le segment et projetable dans son intégralité (devant le plan xy) et exprimé dans le repère de la caméra
-pub fn project_segment(points: (Vector3<f32>, Vector3<f32>), perspective_center_distance: f32) -> ((f32, f32), (f32, f32)) {
-    (project_point(points.0, perspective_center_distance), project_point(points.1, perspective_center_distance))
+pub fn project_line(line: Line3f, perspective_center_distance: f32) -> Line2f {
+    Line2f::new(project_point(line.p0, perspective_center_distance), project_point(line.p1, perspective_center_distance))
 }
 
-fn project_point(point: Vector3<f32>, f: f32) -> (f32, f32) {
-    let x_proj = f * point.x / point.z;
-    let y_proj = f * point.y / point.z;
-    (x_proj, y_proj)
+fn project_point(point: Point3f, f: f32) -> Point2f {
+    let x_proj = f * point.p.x / point.p.z;
+    let y_proj = f * point.p.y / point.p.z;
+    Point2f::new((x_proj, y_proj), point.color)
 }
 
-pub fn projected_to_pixel(x: f32, y: f32, width: i32, height: i32, aspect: f32) -> (i32, i32) {
-    let u = (x + aspect) / (2.0 * aspect);
-    let v = (1.0 - y) / 2.0;
-
-    let i = (u * (width as f32 - 1.0)).round() as i32;
-    let j = (v * (height as f32 - 1.0)).round() as i32;
-
-    (i, j)
+pub fn filter_primitive_3d(primitive: Primitive3f) -> Option<Primitive3f> {
+    match primitive {
+        Primitive3f::Line(line) => filter_line_3d(line).map(Primitive3f::Line),
+        Primitive3f::Point(point) => if point.p.z > EPSILON { Some(Primitive3f::Point(point)) } else { None }
+    }
 }
 
 //pour supprimer les segments situés derrière le plan de la camera (si un sengement coupe le plan, l'adapte pour qu'il soit projetable)
-pub fn adjust_segment_3d(points: (Vector3<f32>, Vector3<f32>)) -> Option<(Vector3<f32>, Vector3<f32>)> {
-    match (points.0.z > 0.0, points.1.z > 0.0) {
-        (true, true) => Some(points),
-        (true, false) => Some(adjusted_segment_3d(points.0, points.1)),
-        (false, true) => Some(adjusted_segment_3d(points.1, points.0)),
+pub fn filter_line_3d(line: Line3f) -> Option<Line3f> {
+    match (line.p0.p.z > 0.0, line.p1.p.z > 0.0) {
+        (true, true) => Some(line),
+        (true, false) => Some(adjusted_line_3d(line)),
+        (false, true) => Some(adjusted_line_3d(line.inverted())),
         (false, false) => None,
     }
 }
 
 //pour un segment donc p0 est situé devant le plan xy (z >= 0) et p1 derriere, tranlate p1 sur le segment de manière à le positionner sur xy
-fn adjusted_segment_3d(p0: Vector3<f32>, p1: Vector3<f32>) -> (Vector3<f32>, Vector3<f32>) {
-    let dxdz = (p1.x - p0.x) / (p1.z - p0.z);
-    let dydz = (p1.y - p0.y) / (p1.z - p0.z);
+fn adjusted_line_3d(mut line: Line3f) -> Line3f {
+    let dxdz = (line.p1.p.x - line.p0.p.x) / (line.p1.p.z - line.p0.p.z);
+    let dydz = (line.p1.p.y - line.p0.p.y) / (line.p1.p.z - line.p0.p.z);
 
-    let dx_intersection = dxdz * (-p0.z + EPSILON);
-    let dy_intersection = dydz * (-p0.z + EPSILON);
+    let dx_intersection = dxdz * (-line.p0.p.z + EPSILON);
+    let dy_intersection = dydz * (-line.p0.p.z + EPSILON);
 
-    (p0, Vector3::new(p0.x + dx_intersection, p0.y + dy_intersection, EPSILON))
+    let p1 = Vector3::new(line.p0.p.x + dx_intersection, line.p0.p.y + dy_intersection, EPSILON);
+    line.p1.p = p1;
+
+    line
 }
