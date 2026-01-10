@@ -54,9 +54,6 @@ pub fn draw_line(
     y1: i32,
     color: u32,
 ) {
-
-    //println!("drawing line from x={x0}, y={y0} to x={x1}, y={y1}");
-
     let dx = (x1 - x0).abs();
     let dy = (y1 - y0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
@@ -84,9 +81,16 @@ pub fn draw_line(
     }
 }
 
+fn draw_point(buffer: &mut [u32], point: Point2i, width: i32, height: i32) {
+    if point.p.0 >= 0 && point.p.0 < width && point.p.1 >=0 && point.p.1 < height {
+        let idx = (point.p.1 as usize) * (width as usize) + (point.p.0 as usize);
+        buffer[idx] = point.color;
+    }
+}
+
 pub fn draw_primitive(primitive: Primitive2i, buffer: &mut [u32], width: usize, height: usize) {
     match primitive {
         Primitive2i::Line(line) => draw_line(buffer, width as i32, height as i32, line.p0.p.0, line.p0.p.1, line.p1.p.0, line.p1.p.1, line.p0.color),
-        Primitive2i::Point(point) => todo!()
+        Primitive2i::Point(point) => draw_point(buffer, point, width as i32, height as i32),
     }
 }
