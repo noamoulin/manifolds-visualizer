@@ -39,7 +39,7 @@ pub fn load_point_cloud(path: &str) -> Result<Vec<Point3f>> {
 
     let mut points = Vec::with_capacity(vertices.len());
 
-    for v in vertices {
+    for v in vertices.iter() {
         let x = get_f32(v, "x")?;
         let y = get_f32(v, "y")?;
         let z = get_f32(v, "z")?;

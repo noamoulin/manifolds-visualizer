@@ -128,11 +128,11 @@ impl Camera {
         self.update_world_to_cam();
     }
 
-    pub fn world_line_to_camera_coordinates(&self, line: Line3f) -> Line3f {
-        Line3f::new(self.world_point_to_camera_coordinates(line.p0), self.world_point_to_camera_coordinates(line.p1))
+    pub fn world_line_to_camera_coordinates(&self, line: &Line3f) -> Line3f {
+        Line3f::new(self.world_point_to_camera_coordinates(&line.p0), self.world_point_to_camera_coordinates(&line.p1))
     }
 
-    fn world_point_to_camera_coordinates(&self, point: Point3f) -> Point3f {
+    fn world_point_to_camera_coordinates(&self, point: &Point3f) -> Point3f {
         let mut homogeneous = point.p.to_homogeneous();
         homogeneous.w = 1.0;
         let from_cam = self.world_to_cam * homogeneous;
@@ -140,7 +140,7 @@ impl Camera {
         Point3f::new(Vector3::new(from_cam.x, from_cam.y, from_cam.z), point.color)
     }
 
-    pub fn world_primitive_to_camera_coordinates(&self, primitive: Primitive3f) -> Primitive3f {
+    pub fn world_primitive_to_camera_coordinates(&self, primitive: &Primitive3f) -> Primitive3f {
         match primitive {
             Primitive3f::Line(line) => Primitive3f::Line(self.world_line_to_camera_coordinates(line)),
             Primitive3f::Point(point) => Primitive3f::Point(self.world_point_to_camera_coordinates(point)),

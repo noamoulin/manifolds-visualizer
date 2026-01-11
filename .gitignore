@@ -24,3 +24,8 @@ target
 # Added by cargo
 
 /target
+
+ptt.ply
+lion.ply
+facade.ply
+scan.ply
